@@ -1,10 +1,15 @@
 package com.example.stub.controller;
 
+import com.example.stub.dto.AuthResponse;
+import com.example.stub.dto.StatusResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid; 
+import com.example.stub.dto.AuthRequest;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 
 @RestController
@@ -15,39 +20,35 @@ public class StubController {
     private static final DateTimeFormatter FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    @Value("${app.delay.min:1000}")
+    private int delayMin;
+
+    @Value("${app.delay.max:2000}")
+    private int delayMax;
+
     @GetMapping("/status")
-    public Map<String, String> getStatus() {
+    public ResponseEntity<StatusResponse> getStatus() {
         delay();
-        Map<String, String> response = new HashMap<>();
-        response.put("login", "Login1");
-        response.put("status", "ok");
-        return response;
+        StatusResponse response = new StatusResponse("Login1", "ok");
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/auth")
-    public Map<String, String> postAuth(@RequestBody AuthRequest request) {
+    public ResponseEntity<AuthResponse> postAuth(@Valid @RequestBody AuthRequest request) {
         delay();
-        Map<String, String> response = new HashMap<>();
-        response.put("login", request.getLogin());
-        response.put("password", request.getPassword());
-        response.put("date", LocalDateTime.now().format(FORMATTER));
-        return response;
-    }
-
-    // DTO – внутренний класс прямо в контроллере
-    static class AuthRequest {
-        private String login;
-        private String password;
-
-        public String getLogin() { return login; }
-        public void setLogin(String login) { this.login = login; }
-        public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
+        String date = LocalDateTime.now().format(FORMATTER);
+        AuthResponse response = new AuthResponse(
+                request.getLogin(),
+                request.getPassword(),
+                date
+        );
+        return ResponseEntity.ok(response);
     }
 
     private void delay() {
         try {
-            int ms = 1000 + RANDOM.nextInt(1001); 
+            int range = delayMax - delayMin;
+            int ms = (range > 0) ? delayMin + RANDOM.nextInt(range + 1) : delayMin;
             Thread.sleep(ms);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
